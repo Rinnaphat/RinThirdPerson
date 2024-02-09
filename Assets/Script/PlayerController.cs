@@ -19,11 +19,18 @@ public class PlayerController : MonoBehaviour
 
     public Animator animator;
 
+    public bool isDead;
+
+    public ParticleSystem damageParticle;
+    public ParticleSystem deadParticle;
+
     public static PlayerController instance;
 
     private void Awake()
     {
         instance = this; 
+        damageParticle.Stop();
+        deadParticle.Stop();
     }
 
     // Start is called before the first frame update
@@ -36,10 +43,12 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        switch (CheckWinner.instance.isWinner)
+        switch (CheckWinner.instance.isWinner || isDead)
         {
             case true:
                 animator.SetBool("Victory",CheckWinner.instance.isWinner);
+                animator.SetBool("Death", true);
+                fixGravityWhenPlayerDead();
                 break;
             case false:
                 Movement();
@@ -82,5 +91,39 @@ public class PlayerController : MonoBehaviour
 
         animator.SetFloat("Speed", Mathf.Abs(movementDirection.x) + Mathf.Abs(movementDirection.z));
         animator.SetBool("Ground", characterController.isGrounded);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("BoxDamage")) 
+        {
+            ShowDamageParticle();
+            isDead = true;
+        }
+    }
+
+    public void ShowDamageParticle()
+    {
+        TogglerSlowMotion();
+        damageParticle.Play();
+        deadParticle.Play();
+        StartCoroutine(delaySlow());
+    }
+
+    void TogglerSlowMotion()
+    {
+        Time.timeScale = 0.5f;
+    }
+
+    IEnumerator delaySlow()
+    {
+        yield return new WaitForSeconds(2f);
+        Time.timeScale = 1;
+    }
+
+    void fixGravityWhenPlayerDead() 
+    {
+        playerVelocity.y += gravityValue * Time.deltaTime;
+        characterController.Move(playerVelocity * Time.deltaTime);
     }
 }
